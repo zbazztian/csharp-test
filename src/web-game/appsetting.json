@@ -1,0 +1,6 @@
+{
+  "ConnectionStrings": {
+    "SOME-KEY": "key=value;username=john;password=letmein456;",
+    "SOME-OTHER-KEY": "key=value;username=jane;password=topsecret123;"
+  }
+}

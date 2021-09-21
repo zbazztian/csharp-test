@@ -1,0 +1,94 @@
+name: "CodeQL"
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: windows-latest
+#     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      matrix:
+        node-version: [14.x]
+    
+    env:
+      BUILD_CONFIGURATION: "release"
+    
+    steps:
+    - name: Echo current repository
+      run: echo "We are currently in ${{ github.repository }}"
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v2.4.0
+      with:
+        node-version: ${{ matrix.node-version }}
+        
+    - name: Checkout powerapps-lucky
+      uses: actions/checkout@v2
+      with:
+        path: ./a
+
+    - name: Checkout powerapps-blackmores
+      uses: actions/checkout@v2
+      with:
+        repository: CartoDB/odyssey.js
+        path: ./powerapps-blackmores
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v1
+      with:
+        source-root: ./a
+        languages: csharp, javascript
+        config-file: ./a/.github/workflows/codeql/codeql-config.yml
+
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v1
+
+    - name: Setup VSTest Path
+      uses: darenm/Setup-VSTest@v1
+
+    - name: Setup NuGet
+      uses: nuget/setup-nuget@v1.0.5
+      
+    - name: Restore NuGet Packages
+      run: nuget restore ./a/src/web-game/Globomantics.sln
+
+    - name: Run MSBuild
+      working-directory: ./a/src/web-game
+      run: msbuild Globomantics.sln /t:Rebuild /p:Configuration=${{ env.BUILD_CONFIGURATION }} /p:UseSharedCompilation=false
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v1        
+      with:
+        output: sarif-results
+        upload: False
+
+    - name: filter-sarif
+      uses: zbazztian/filter-sarif@master
+      with:
+        patterns: |
+          -**/ApiService.cs
+        input: sarif-results/csharp.sarif
+        output: sarif-results/csharp.sarif
+
+    - name: Upload C# SARIF
+      uses: github/codeql-action/upload-sarif@v1
+      with:
+        sarif_file: sarif-results
+
+    - name: Upload CodeQL Debug Files
+      uses: actions/upload-artifact@v2
+      with:
+        name: CodeQL Debug Files
+        path: |
+          ${{ runner.temp }}/codeql_databases/csharp/log
+          sarif-results

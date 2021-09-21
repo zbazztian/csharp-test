@@ -1,0 +1,8 @@
+name: "Security and Quality"
+
+queries:
+  - uses: security-and-quality
+  - uses: zbazztian/custom-queries/csharp-hardcoded-credentials/credential-variables-in-source-files.ql@master
+
+paths:
+  - '**/*.json'
